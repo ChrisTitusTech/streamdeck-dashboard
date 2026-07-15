@@ -1,6 +1,6 @@
 {
   "name": "streamdeck-codex-status",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "OpenDeck plugin that shows whether local Codex sessions are working, complete, or offline.",
   "license": "MIT",

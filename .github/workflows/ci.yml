@@ -52,6 +52,14 @@ jobs:
           unzip -t release/*.streamDeckPlugin
           test "$(unzip -Z1 release/*.streamDeckPlugin | cut -d/ -f1 | sort -u)" = "com.christitustech.codex-status.sdPlugin"
 
+      - name: Verify reproducible package
+        if: matrix.node == 24
+        run: |
+          first=$(sha256sum -- release/*.streamDeckPlugin | cut -d' ' -f1)
+          TZ=Pacific/Auckland npm run package
+          second=$(sha256sum -- release/*.streamDeckPlugin | cut -d' ' -f1)
+          test "$first" = "$second"
+
       - name: Upload packaged plugin
         if: matrix.node == 24
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

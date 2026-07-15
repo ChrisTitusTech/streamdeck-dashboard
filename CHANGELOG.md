@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-07-14
+
+### Fixed
+
+- Encode package timestamps in UTC so release archives are byte-for-byte reproducible across builder timezones.
+
 ## [1.0.0] - 2026-07-14
 
 ### Added
@@ -14,5 +20,6 @@ All notable changes to this project are documented here. The format is based on 
 - Reproducible `.streamDeckPlugin` packaging.
 - Automated tests, CI, release checksums, and build provenance attestations.
 
-[Unreleased]: https://github.com/ChrisTitusTech/streamdeck-dashboard/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/ChrisTitusTech/streamdeck-dashboard/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/ChrisTitusTech/streamdeck-dashboard/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/ChrisTitusTech/streamdeck-dashboard/releases/tag/v1.0.0
