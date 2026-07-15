@@ -1,0 +1,12 @@
+extends: default
+
+rules:
+  comments:
+    min-spaces-from-content: 1
+  document-start: disable
+  line-length: disable
+  truthy:
+    allowed-values:
+      - "true"
+      - "false"
+      - "on"

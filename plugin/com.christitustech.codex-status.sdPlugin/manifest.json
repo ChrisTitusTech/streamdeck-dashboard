@@ -1,0 +1,32 @@
+{
+  "Actions": [
+    {
+      "Controllers": [
+        "Keypad"
+      ],
+      "Icon": "icons/codex",
+      "Name": "Codex Status",
+      "States": [
+        {
+          "Image": "icons/codex"
+        }
+      ],
+      "SupportedInMultiActions": false,
+      "Tooltip": "Show whether a local Codex task is working or complete",
+      "UUID": "com.christitustech.codex-status.monitor"
+    }
+  ],
+  "Author": "Chris Titus Tech",
+  "Category": "Codex",
+  "CodePath": "index.js",
+  "Description": "Monitors live local Codex sessions and displays their task state.",
+  "Icon": "icons/codex",
+  "Name": "Codex Status",
+  "OS": [
+    {
+      "MinimumVersion": "1.0",
+      "Platform": "linux"
+    }
+  ],
+  "Version": "1.0.0"
+}

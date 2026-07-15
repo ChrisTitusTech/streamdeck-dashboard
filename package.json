@@ -1,0 +1,27 @@
+{
+  "name": "streamdeck-codex-status",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OpenDeck plugin that shows whether local Codex sessions are working, complete, or offline.",
+  "license": "MIT",
+  "author": "Chris Titus Tech",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChrisTitusTech/streamdeck-dashboard.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/check.mjs",
+    "package": "npm run build && node scripts/package.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "ws": "8.21.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1"
+  }
+}

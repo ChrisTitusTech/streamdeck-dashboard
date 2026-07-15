@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/ChrisTitusTech/streamdeck-dashboard/security/advisories/new
+    about: Report security issues privately
+  - name: OpenDeck support
+    url: https://github.com/nekename/OpenDeck
+    about: Report issues with OpenDeck itself upstream

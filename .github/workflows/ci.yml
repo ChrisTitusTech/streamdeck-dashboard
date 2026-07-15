@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Node.js ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - 18
+          - 22
+          - 24
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check project
+        run: npm run check
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build release package
+        run: npm run package
+
+      - name: Verify archive
+        run: |
+          unzip -t release/*.streamDeckPlugin
+          test "$(unzip -Z1 release/*.streamDeckPlugin | cut -d/ -f1 | sort -u)" = "com.christitustech.codex-status.sdPlugin"
+
+      - name: Upload packaged plugin
+        if: matrix.node == 24
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: codex-status-plugin
+          path: release/*.streamDeckPlugin
+          if-no-files-found: error
