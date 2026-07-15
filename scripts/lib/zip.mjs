@@ -16,9 +16,9 @@ function crc32(buffer) {
 }
 
 function dosTimestamp(date) {
-  const year = Math.max(1980, date.getFullYear());
-  const time = (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2);
-  const day = ((year - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate();
+  const year = Math.max(1980, date.getUTCFullYear());
+  const time = (date.getUTCHours() << 11) | (date.getUTCMinutes() << 5) | Math.floor(date.getUTCSeconds() / 2);
+  const day = ((year - 1980) << 9) | ((date.getUTCMonth() + 1) << 5) | date.getUTCDate();
   return { day, time };
 }
 
@@ -107,4 +107,4 @@ export async function createZip(sourceDirectory, destination, archiveRoot) {
   return files.map((file) => `${archiveRoot}/${file}`);
 }
 
-export { crc32 };
+export { crc32, dosTimestamp };

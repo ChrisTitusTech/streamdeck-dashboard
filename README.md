@@ -64,7 +64,7 @@ npm run package
 The release command creates:
 
 ```text
-release/codex-status-v1.0.0.streamDeckPlugin
+release/codex-status-vX.Y.Z.streamDeckPlugin
 ```
 
 For local development installation:
