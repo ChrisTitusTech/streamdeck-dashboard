@@ -83,6 +83,22 @@ test('SessionTracker follows appended task lifecycle events', async (t) => {
   assert.equal(await tracker.isBusy(fixture.sessionPath), false);
 });
 
+test('SessionTracker clears an aborted turn without leaving stale work', async (t) => {
+  const fixture = await makeFixture();
+  t.after(() => fs.rm(fixture.root, { recursive: true, force: true }));
+  const tracker = new SessionTracker();
+
+  await fs.appendFile(fixture.sessionPath, event('task_started', 'aborted-turn'));
+  assert.equal(await tracker.isBusy(fixture.sessionPath), true);
+
+  await fs.appendFile(fixture.sessionPath, event('turn_aborted', 'aborted-turn'));
+  assert.equal(await tracker.isBusy(fixture.sessionPath), false);
+
+  await fs.appendFile(fixture.sessionPath, event('task_started', 'next-turn'));
+  await fs.appendFile(fixture.sessionPath, event('task_complete', 'next-turn'));
+  assert.equal(await tracker.isBusy(fixture.sessionPath), false);
+});
+
 test('CodexStatusMonitor follows a deleted rollout through its open descriptor', async (t) => {
   const fixture = await makeDeletedRolloutFixture();
   t.after(async () => {

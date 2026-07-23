@@ -78,7 +78,7 @@ class SessionTracker {
 
       if (eventType === 'task_started') {
         entry.activeTurns.add(turnId || '__unknown_turn__');
-      } else if (eventType === 'task_complete') {
+      } else if (eventType === 'task_complete' || eventType === 'turn_aborted') {
         if (turnId) entry.activeTurns.delete(turnId);
         else entry.activeTurns.clear();
       }
