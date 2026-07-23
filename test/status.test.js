@@ -28,6 +28,32 @@ async function makeFixture() {
   return { procRoot, root, sessionPath };
 }
 
+async function makeDeletedRolloutFixture() {
+  const fixture = await makeFixture();
+  const descriptorPath = path.join(fixture.procRoot, '123', 'fd', '9');
+  const handle = await fs.open(fixture.sessionPath, 'a+');
+
+  await fs.rm(descriptorPath);
+  await fs.rm(fixture.sessionPath);
+  await fs.symlink(`/proc/self/fd/${handle.fd}`, descriptorPath);
+
+  const fileSystem = new Proxy(fs, {
+    get(target, property) {
+      if (property === 'readlink') {
+        return async (filePath) => {
+          if (filePath === descriptorPath) {
+            return `${fixture.sessionPath} (deleted)`;
+          }
+          return target.readlink(filePath);
+        };
+      }
+      return target[property];
+    }
+  });
+
+  return { ...fixture, descriptorPath, fileSystem, handle };
+}
+
 function event(type, turnId = 'turn-1') {
   return JSON.stringify({
     type: 'event_msg',
@@ -55,6 +81,32 @@ test('SessionTracker follows appended task lifecycle events', async (t) => {
 
   await fs.appendFile(fixture.sessionPath, event('task_complete'));
   assert.equal(await tracker.isBusy(fixture.sessionPath), false);
+});
+
+test('CodexStatusMonitor follows a deleted rollout through its open descriptor', async (t) => {
+  const fixture = await makeDeletedRolloutFixture();
+  t.after(async () => {
+    await fixture.handle.close();
+    await fs.rm(fixture.root, { recursive: true, force: true });
+  });
+  const monitor = new CodexStatusMonitor({
+    fileSystem: fixture.fileSystem,
+    procRoot: fixture.procRoot
+  });
+
+  await fixture.handle.write(event('task_started'));
+  assert.deepEqual(await monitor.getStatus(), {
+    state: 'working',
+    activeTasks: 1,
+    processCount: 1
+  });
+
+  await fixture.handle.write(event('task_complete'));
+  assert.deepEqual(await monitor.getStatus(), {
+    state: 'complete',
+    activeTasks: 0,
+    processCount: 1
+  });
 });
 
 test('CodexStatusMonitor reports working, complete, then offline', async (t) => {

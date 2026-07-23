@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep tracking active Codex sessions when Linux marks their still-open rollout files as deleted.
+
 ## [1.0.1] - 2026-07-14
 
 ### Fixed

@@ -3,7 +3,9 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
-const SESSION_PATH_PATTERN = /\/sessions\/\d{4}\/\d{2}\/\d{2}\/rollout-.*\.jsonl$/;
+const SESSION_PATH_PATTERN =
+  /\/sessions\/\d{4}\/\d{2}\/\d{2}\/rollout-.*\.jsonl(?: \(deleted\))?$/;
+const DELETED_FILE_SUFFIX = ' (deleted)';
 
 class SessionTracker {
   constructor(fileSystem = fs) {
@@ -115,8 +117,16 @@ async function findLiveCodexSessions(procRoot = '/proc', fileSystem = fs) {
 
       for (const descriptor of fileDescriptors) {
         try {
-          const target = await fileSystem.readlink(path.join(fdPath, descriptor));
-          if (SESSION_PATH_PATTERN.test(target)) sessions.push(target);
+          const descriptorPath = path.join(fdPath, descriptor);
+          const target = await fileSystem.readlink(descriptorPath);
+          if (!SESSION_PATH_PATTERN.test(target)) continue;
+
+          // A running Codex session can outlive its rollout directory entry.
+          // Linux keeps the open descriptor readable, but marks its symlink
+          // target with " (deleted)".
+          sessions.push(
+            target.endsWith(DELETED_FILE_SUFFIX) ? descriptorPath : target
+          );
         } catch {
           // File descriptors can disappear while /proc is being read.
         }
