@@ -6,6 +6,7 @@ const path = require('node:path');
 const SESSION_PATH_PATTERN =
   /\/sessions\/\d{4}\/\d{2}\/\d{2}\/rollout-.*\.jsonl(?: \(deleted\))?$/;
 const DELETED_FILE_SUFFIX = ' (deleted)';
+const UNKNOWN_TURN = '__unknown_turn__';
 
 class SessionTracker {
   constructor(fileSystem = fs) {
@@ -24,9 +25,16 @@ class SessionTracker {
     }
 
     let entry = this.entries.get(filePath);
-    if (!entry || stat.size < entry.offset) {
+    if (
+      !entry ||
+      stat.size < entry.offset ||
+      stat.dev !== entry.device ||
+      stat.ino !== entry.inode
+    ) {
       entry = {
-        activeTurns: new Set(),
+        activeTurn: null,
+        device: stat.dev,
+        inode: stat.ino,
         offset: 0,
         remainder: ''
       };
@@ -34,20 +42,43 @@ class SessionTracker {
     }
 
     if (stat.size > entry.offset) {
-      const handle = await this.fs.open(filePath, 'r');
+      let handle;
 
       try {
-        const length = stat.size - entry.offset;
-        const buffer = Buffer.alloc(length);
-        await handle.read(buffer, 0, length, entry.offset);
-        entry.offset = stat.size;
-        this.#consume(entry, buffer.toString('utf8'));
+        handle = await this.fs.open(filePath, 'r');
+        const chunks = [];
+
+        while (entry.offset < stat.size) {
+          const length = Math.min(stat.size - entry.offset, 64 * 1024);
+          const buffer = Buffer.allocUnsafe(length);
+          const { bytesRead } = await handle.read(
+            buffer,
+            0,
+            length,
+            entry.offset
+          );
+
+          if (bytesRead === 0) break;
+          entry.offset += bytesRead;
+          chunks.push(buffer.subarray(0, bytesRead));
+        }
+
+        this.#consume(entry, Buffer.concat(chunks).toString('utf8'));
+      } catch {
+        this.entries.delete(filePath);
+        return false;
       } finally {
-        await handle.close();
+        if (handle) {
+          try {
+            await handle.close();
+          } catch {
+            // The owning process can close a descriptor while it is read.
+          }
+        }
       }
     }
 
-    return entry.activeTurns.size > 0;
+    return entry.activeTurn !== null;
   }
 
   forgetExcept(filePaths) {
@@ -77,10 +108,17 @@ class SessionTracker {
       const turnId = record.payload?.turn_id;
 
       if (eventType === 'task_started') {
-        entry.activeTurns.add(turnId || '__unknown_turn__');
+        // A Codex process runs one foreground turn at a time. A new start
+        // supersedes an orphaned start left behind by a resume or interruption.
+        entry.activeTurn = turnId || UNKNOWN_TURN;
       } else if (eventType === 'task_complete' || eventType === 'turn_aborted') {
-        if (turnId) entry.activeTurns.delete(turnId);
-        else entry.activeTurns.clear();
+        if (
+          !turnId ||
+          entry.activeTurn === UNKNOWN_TURN ||
+          entry.activeTurn === turnId
+        ) {
+          entry.activeTurn = null;
+        }
       }
     }
   }
@@ -160,9 +198,14 @@ class CodexStatusMonitor {
     );
     this.tracker.forgetExcept(sessionPaths);
 
-    const busyResults = await Promise.all(
-      sessionPaths.map((filePath) => this.tracker.isBusy(filePath))
-    );
+    const busyResults = await Promise.all(sessionPaths.map(async (filePath) => {
+      try {
+        return await this.tracker.isBusy(filePath);
+      } catch {
+        // A process or descriptor can disappear between discovery and reading.
+        return false;
+      }
+    }));
     const activeTasks = busyResults.filter(Boolean).length;
 
     if (activeTasks > 0) {

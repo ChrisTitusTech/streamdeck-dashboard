@@ -13,7 +13,7 @@ OpenDeck WebSocket
                   \--> /proc/<pid>/fd/* -> active Codex rollout JSONL
 ```
 
-The monitor discovers processes whose Linux `comm` value is exactly `codex`. It resolves open file descriptors that point to a dated Codex rollout and incrementally parses only `event_msg` records. Active turn identifiers are added on `task_started` and removed on `task_complete`.
+The monitor discovers processes whose Linux `comm` value is exactly `codex`. It resolves open file descriptors that point to a dated Codex rollout and incrementally parses only `event_msg` records. Each session tracks its latest `task_started` turn until the matching `task_complete` or `turn_aborted` event. A newer turn replaces an orphaned older turn because a Codex process runs only one foreground turn at a time.
 
 The tracker caches the last byte offset for every active rollout. It reads only appended bytes after the initial scan and drops the cache when the owning process closes the rollout.
 

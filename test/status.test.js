@@ -12,18 +12,30 @@ const {
   findLiveCodexSessions
 } = require('../plugin/com.christitustech.codex-status.sdPlugin/lib/status');
 
-async function makeFixture() {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codex-status-'));
-  const procRoot = path.join(root, 'proc');
+async function addCodexProcess(fixture, processId, sessionName) {
+  const { procRoot, root } = fixture;
   const sessionRoot = path.join(root, 'home', '.codex', 'sessions', '2026', '07', '14');
-  const sessionPath = path.join(sessionRoot, 'rollout-test.jsonl');
-  const processPath = path.join(procRoot, '123', 'fd');
+  const sessionPath = path.join(sessionRoot, sessionName);
+  const processPath = path.join(procRoot, processId, 'fd');
 
   await fs.mkdir(sessionRoot, { recursive: true });
   await fs.mkdir(processPath, { recursive: true });
-  await fs.writeFile(path.join(procRoot, '123', 'comm'), 'codex\n');
+  await fs.writeFile(path.join(procRoot, processId, 'comm'), 'codex\n');
   await fs.writeFile(sessionPath, '');
   await fs.symlink(sessionPath, path.join(processPath, '9'));
+
+  return sessionPath;
+}
+
+async function makeFixture() {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codex-status-'));
+  const procRoot = path.join(root, 'proc');
+  const fixture = { procRoot, root };
+  const sessionPath = await addCodexProcess(
+    fixture,
+    '123',
+    'rollout-test.jsonl'
+  );
 
   return { procRoot, root, sessionPath };
 }
@@ -83,6 +95,34 @@ test('SessionTracker follows appended task lifecycle events', async (t) => {
   assert.equal(await tracker.isBusy(fixture.sessionPath), false);
 });
 
+test('SessionTracker consumes a lifecycle event across partial reads', async (t) => {
+  const fixture = await makeFixture();
+  t.after(() => fs.rm(fixture.root, { recursive: true, force: true }));
+  const fileSystem = new Proxy(fs, {
+    get(target, property) {
+      if (property === 'open') {
+        return async (...args) => {
+          const handle = await target.open(...args);
+          return {
+            close: () => handle.close(),
+            read: (buffer, offset, length, position) => handle.read(
+              buffer,
+              offset,
+              Math.min(length, 7),
+              position
+            )
+          };
+        };
+      }
+      return target[property];
+    }
+  });
+  const tracker = new SessionTracker(fileSystem);
+
+  await fs.appendFile(fixture.sessionPath, event('task_started'));
+  assert.equal(await tracker.isBusy(fixture.sessionPath), true);
+});
+
 test('SessionTracker clears an aborted turn without leaving stale work', async (t) => {
   const fixture = await makeFixture();
   t.after(() => fs.rm(fixture.root, { recursive: true, force: true }));
@@ -96,6 +136,32 @@ test('SessionTracker clears an aborted turn without leaving stale work', async (
 
   await fs.appendFile(fixture.sessionPath, event('task_started', 'next-turn'));
   await fs.appendFile(fixture.sessionPath, event('task_complete', 'next-turn'));
+  assert.equal(await tracker.isBusy(fixture.sessionPath), false);
+});
+
+test('SessionTracker replaces an orphaned turn with the current turn', async (t) => {
+  const fixture = await makeFixture();
+  t.after(() => fs.rm(fixture.root, { recursive: true, force: true }));
+  const tracker = new SessionTracker();
+
+  await fs.appendFile(fixture.sessionPath, event('task_started', 'orphaned-turn'));
+  await fs.appendFile(fixture.sessionPath, event('task_started', 'current-turn'));
+  await fs.appendFile(fixture.sessionPath, event('task_complete', 'current-turn'));
+
+  assert.equal(await tracker.isBusy(fixture.sessionPath), false);
+});
+
+test('SessionTracker ignores a late terminal event for a superseded turn', async (t) => {
+  const fixture = await makeFixture();
+  t.after(() => fs.rm(fixture.root, { recursive: true, force: true }));
+  const tracker = new SessionTracker();
+
+  await fs.appendFile(fixture.sessionPath, event('task_started', 'old-turn'));
+  await fs.appendFile(fixture.sessionPath, event('task_started', 'current-turn'));
+  await fs.appendFile(fixture.sessionPath, event('task_complete', 'old-turn'));
+  assert.equal(await tracker.isBusy(fixture.sessionPath), true);
+
+  await fs.appendFile(fixture.sessionPath, event('task_complete', 'current-turn'));
   assert.equal(await tracker.isBusy(fixture.sessionPath), false);
 });
 
@@ -149,5 +215,65 @@ test('CodexStatusMonitor reports working, complete, then offline', async (t) => 
     state: 'offline',
     activeTasks: 0,
     processCount: 0
+  });
+});
+
+test('CodexStatusMonitor completes only when every live session is idle', async (t) => {
+  const fixture = await makeFixture();
+  t.after(() => fs.rm(fixture.root, { recursive: true, force: true }));
+  const secondSessionPath = await addCodexProcess(
+    fixture,
+    '456',
+    'rollout-second.jsonl'
+  );
+  const monitor = new CodexStatusMonitor({ procRoot: fixture.procRoot });
+
+  await fs.appendFile(fixture.sessionPath, event('task_started', 'first-turn'));
+  await fs.appendFile(secondSessionPath, event('task_started', 'second-turn'));
+  assert.deepEqual(await monitor.getStatus(), {
+    state: 'working',
+    activeTasks: 2,
+    processCount: 2
+  });
+
+  await fs.appendFile(fixture.sessionPath, event('task_complete', 'first-turn'));
+  assert.deepEqual(await monitor.getStatus(), {
+    state: 'working',
+    activeTasks: 1,
+    processCount: 2
+  });
+
+  await fs.appendFile(secondSessionPath, event('task_complete', 'second-turn'));
+  assert.deepEqual(await monitor.getStatus(), {
+    state: 'complete',
+    activeTasks: 0,
+    processCount: 2
+  });
+});
+
+test('CodexStatusMonitor keeps aggregating if one session read fails', async (t) => {
+  const fixture = await makeFixture();
+  t.after(() => fs.rm(fixture.root, { recursive: true, force: true }));
+  const secondSessionPath = await addCodexProcess(
+    fixture,
+    '456',
+    'rollout-second.jsonl'
+  );
+  const tracker = {
+    forgetExcept() {},
+    async isBusy(filePath) {
+      if (filePath === fixture.sessionPath) throw new Error('session vanished');
+      return filePath === secondSessionPath;
+    }
+  };
+  const monitor = new CodexStatusMonitor({
+    procRoot: fixture.procRoot,
+    tracker
+  });
+
+  assert.deepEqual(await monitor.getStatus(), {
+    state: 'working',
+    activeTasks: 1,
+    processCount: 2
   });
 });

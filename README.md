@@ -38,10 +38,11 @@ The plugin identifies same-user `codex` processes through Linux `/proc`, follows
 
 - `task_started`
 - `task_complete`
+- `turn_aborted`
 
 It does not read or transmit prompt text, responses, credentials, environment variables, or source files. It has no network client other than the local WebSocket connection OpenDeck requires for plugins.
 
-Multiple Codex sessions are supported. If any live session is working, the key remains amber and shows the number of active tasks.
+Multiple Codex sessions are supported. If any live session is working, the key remains amber and shows the number of active tasks. The key changes to green only when every running session is idle.
 
 ## Scope
 

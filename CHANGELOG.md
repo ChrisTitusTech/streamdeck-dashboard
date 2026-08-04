@@ -7,6 +7,8 @@ All notable changes to this project are documented here. The format is based on 
 ### Fixed
 
 - Keep tracking active Codex sessions when Linux marks their still-open rollout files as deleted.
+- Prevent superseded or partially read turns from leaving the status stuck on working.
+- Report complete only after every discovered Codex session is idle.
 
 ## [1.0.1] - 2026-07-14
 
