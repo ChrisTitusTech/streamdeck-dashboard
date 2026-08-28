@@ -1,0 +1,33 @@
+{
+  "Actions": [
+    {
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "Icon": "icons/notifications",
+      "Name": "Discord Notifications",
+      "States": [
+        {
+          "Image": "icons/notifications"
+        }
+      ],
+      "SupportedInMultiActions": false,
+      "Tooltip": "Mirror Discord's notification badge; press to open Discord",
+      "UUID": "com.christitustech.discord-notifications.monitor"
+    }
+  ],
+  "Author": "Chris Titus Tech",
+  "Category": "Discord",
+  "CodePath": "index.js",
+  "Description": "Mirrors Discord's current notification badge locally without OAuth credentials.",
+  "Icon": "icons/notifications",
+  "Name": "Discord Notifications",
+  "OS": [
+    {
+      "MinimumVersion": "1.0",
+      "Platform": "linux"
+    }
+  ],
+  "Version": "1.0.0"
+}
