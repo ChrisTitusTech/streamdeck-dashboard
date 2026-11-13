@@ -12,14 +12,14 @@
         }
       ],
       "SupportedInMultiActions": false,
-      "Tooltip": "Show whether a local Codex task is working or complete",
+      "Tooltip": "Show local Codex and T3 Code activity across environments",
       "UUID": "com.christitustech.codex-status.monitor"
     }
   ],
   "Author": "Chris Titus Tech",
   "Category": "Codex",
   "CodePath": "index.js",
-  "Description": "Monitors live local Codex sessions and displays their task state.",
+  "Description": "Monitors local Codex sessions and T3 Code work across linked machines.",
   "Icon": "icons/codex",
   "Name": "Codex Status",
   "OS": [
@@ -28,5 +28,5 @@
       "Platform": "linux"
     }
   ],
-  "Version": "1.0.1"
+  "Version": "1.1.0"
 }

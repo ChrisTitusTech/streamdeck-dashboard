@@ -66,7 +66,7 @@ The status follows the live rollout attached to the Codex process. If Codex was 
 
 ### Cloud or remote tasks are not shown
 
-Only local Codex processes on the same Linux host are in scope. Cloud-only and remote-host tasks are not visible to this plugin.
+Connect T3 Code as described below. Remote work must be running in a configured T3 server or one of its linked environments. Standalone remote Codex and cloud-only tasks remain outside scope.
 
 ## Install from source for development
 
@@ -81,3 +81,39 @@ node scripts/install.mjs --slot 0
 ```
 
 Replace `0` with an empty key position. The script creates a timestamped profile backup under `~/.local/state/streamdeck-dashboard/backups`.
+
+## Connect T3 Code
+
+Use a current T3 Code version with MCP thread listing and linked environments (developed against desktop 0.1.9). In a source checkout on the OpenDeck host:
+
+```bash
+npm run connect:t3
+```
+
+The setup reads the local server address from `$T3CODE_HOME/userdata/server-runtime.json` (default `~/.t3`). Open its printed authorization URL in a browser on the same host and approve **read-only** access. T3 requires this approval to create the plugin connection. The callback listener binds only to loopback and exits after approval or five minutes.
+
+For another server:
+
+```bash
+npm run connect:t3 -- https://your-t3-server
+```
+
+Repeat for each independent server in the app. A server's directly linked environments are discovered automatically through `t3_environment_links`; enable **Settings > Labs > Linked environments** in T3 to use that feature. Desktop-only saved connections are not necessarily server links. Each environment is counted once even if multiple sources link to it.
+
+The setup writes `$XDG_CONFIG_HOME/codex-status/t3.json` (default `~/.config/codex-status/t3.json`) and a separate token file with mode `600`. The config uses this format:
+
+```json
+{
+  "sources": [
+    {
+      "endpoint": "http://127.0.0.1:3773/mcp",
+      "tokenFile": "token-file-from-setup",
+      "includeLinked": true
+    }
+  ]
+}
+```
+
+The port is an example; setup uses the actual server port. Token paths are relative to the config file or absolute. Endpoint URLs require HTTPS except on loopback. For a standalone server with linked environments disabled, set `includeLinked` to `false`. The plugin reloads config and token files on each poll. Re-run setup after a local server port change or token expiry/revocation. Remove a source from the config and revoke its connection in T3 to disconnect it.
+
+If a source cannot be reached, its count is excluded and the key reports source errors. Without known active work it shows **UNKNOWN**, never **COMPLETE**. A missing config keeps the original local Codex behavior; an invalid config shows an error. Polls never overlap and individual MCP requests time out after five seconds, so unreachable machines can slow refreshes.

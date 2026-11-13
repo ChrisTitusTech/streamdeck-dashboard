@@ -9,7 +9,24 @@ function escapeXml(value) {
     .replaceAll("'", '&apos;');
 }
 
-function getDisplay(status) {
+function getDisplay(status, frame = 0) {
+  if (status.t3) {
+    const working = status.state === 'working';
+    const unknown = status.state === 'unknown';
+    const busy = status.t3.environments.filter((env) => env.activeTasks > 0);
+    const footers = [
+      `${busy.length}/${status.t3.environments.length} MACHINES BUSY`,
+      ...busy.map((env) => `${String(env.label || 'T3 Code').slice(0, 16)}: ${env.activeTasks}`)
+    ];
+    if (status.t3.errors) footers.unshift(`${status.t3.errors} SOURCE ERRORS`);
+    return {
+      accent: working ? '#f59e0b' : unknown ? '#ef4444' : '#22c55e',
+      label: working ? 'WORKING' : unknown ? 'UNKNOWN' : 'COMPLETE',
+      detail: `${status.t3.activeTasks} T3 / ${status.localActiveTasks || 0} LOCAL`,
+      heading: 'CODEX + T3',
+      footer: footers[Math.floor(frame / 3) % footers.length]
+    };
+  }
   if (status.state === 'working') {
     return {
       accent: '#f59e0b',
@@ -33,16 +50,16 @@ function getDisplay(status) {
   };
 }
 
-function renderStatus(status) {
-  const display = getDisplay(status);
+function renderStatus(status, frame = 0) {
+  const display = getDisplay(status, frame);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
   <rect width="144" height="144" rx="12" fill="#18181b"/>
   <circle cx="72" cy="32" r="17" fill="none" stroke="${display.accent}" stroke-width="5"/>
   <path d="M62 32h20M72 22v20" stroke="${display.accent}" stroke-width="4" stroke-linecap="round"/>
-  <text x="72" y="65" fill="#a1a1aa" font-family="sans-serif" font-size="13" font-weight="700" text-anchor="middle">CODEX</text>
+  <text x="72" y="65" fill="#a1a1aa" font-family="sans-serif" font-size="13" font-weight="700" text-anchor="middle">${escapeXml(display.heading || 'CODEX')}</text>
   <text x="72" y="94" fill="${display.accent}" font-family="sans-serif" font-size="19" font-weight="800" text-anchor="middle">${escapeXml(display.label)}</text>
   <text x="72" y="119" fill="#d4d4d8" font-family="sans-serif" font-size="10" font-weight="600" text-anchor="middle">${escapeXml(display.detail)}</text>
-  <circle cx="72" cy="132" r="3" fill="${display.accent}"/>
+  ${display.footer ? `<text x="72" y="135" fill="#a1a1aa" font-family="sans-serif" font-size="9" text-anchor="middle">${escapeXml(display.footer)}</text>` : `<circle cx="72" cy="132" r="3" fill="${display.accent}"/>`}
 </svg>`;
 
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;

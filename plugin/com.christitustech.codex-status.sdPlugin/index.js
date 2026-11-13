@@ -3,6 +3,7 @@
 'use strict';
 
 const { CodexStatusMonitor } = require('./lib/status');
+const { CombinedStatusMonitor } = require('./lib/t3');
 const { renderStatus } = require('./lib/render');
 
 const WebSocketClient = globalThis.WebSocket || require('ws');
@@ -31,7 +32,7 @@ function start() {
     process.exit(1);
   }
 
-  const monitor = new CodexStatusMonitor();
+  const monitor = new CombinedStatusMonitor(new CodexStatusMonitor());
   const contexts = new Set();
   const lastImages = new Map();
   const socket = new WebSocketClient(`ws://127.0.0.1:${port}`);
@@ -49,7 +50,7 @@ function start() {
 
     try {
       const status = await monitor.getStatus();
-      const image = renderStatus(status);
+      const image = renderStatus(status, Math.floor(Date.now() / 1000));
 
       for (const context of contexts) {
         if (lastImages.get(context) === image) continue;

@@ -49,6 +49,8 @@ const JavaScriptFiles = [
   'plugin/com.christitustech.codex-status.sdPlugin/index.js',
   'plugin/com.christitustech.codex-status.sdPlugin/lib/render.js',
   'plugin/com.christitustech.codex-status.sdPlugin/lib/status.js',
+  'plugin/com.christitustech.codex-status.sdPlugin/lib/t3.js',
+  'scripts/connect-t3.mjs',
   'plugin/com.christitustech.discord-notifications.sdPlugin/index.js',
   'plugin/com.christitustech.discord-notifications.sdPlugin/lib/notifications.js',
   'scripts/build.mjs',

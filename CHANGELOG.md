@@ -4,6 +4,11 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+### Added
+
+- T3 Code status across projects, providers, subagents, and linked machines.
+- Read-only OAuth connection setup, separate source counts, rotating busy-machine labels, and visible source errors.
+
 ### Fixed
 
 - Keep tracking active Codex sessions when Linux marks their still-open rollout files as deleted.
