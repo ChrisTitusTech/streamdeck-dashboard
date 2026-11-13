@@ -15,7 +15,7 @@ An [OpenDeck](https://github.com/nekename/OpenDeck) plugin for Linux that turns 
 | Red **UNKNOWN** | A configured T3 source could not be checked and no known work is active. |
 | Gray **OFFLINE** | No local `codex` process is running. |
 
-The key polls once per second after the previous poll finishes. Press it to force an immediate refresh. With T3 connected, it shows separate T3/local counts and rotates through busy machine names and counts every three seconds. Connection failures remain visible, including while other machines are working.
+The key polls once per second after the previous poll finishes. Press it to force an immediate refresh. With T3 connected, it shows a larger active T3 thread count under the status and rotates through busy machine names and counts every three seconds. Connection failures remain visible, including while other machines are working.
 
 ## Install
 
@@ -53,7 +53,7 @@ Multiple Codex sessions are supported. If any live session is working, the key r
 
 Local Codex detection covers same-user Linux processes. Optional T3 monitoring covers all providers, projects, and subagent threads returned by each configured server and its directly linked environments. Preparing, queued, starting, running, and waiting threads count as active; waiting includes work that needs user input. Counts represent threads, not individual shell commands or tool calls.
 
-T3 and local Codex counts can overlap, so they are displayed separately. Remote work requires a T3 connection or linked environment; standalone remote Codex and cloud-only tasks remain outside scope. Machines only saved as desktop connections must be connected separately if they are not linked on the monitored server. Linked-environment discovery requires the T3 Labs feature; set `includeLinked` to `false` for a standalone server.
+The displayed thread count covers T3 across all monitored environments. Local Codex activity also keeps the key working; its process count is not added because it can overlap with T3 threads. Remote work requires a T3 connection or linked environment; standalone remote Codex and cloud-only tasks remain outside scope. Machines only saved as desktop connections must be connected separately if they are not linked on the monitored server. Linked-environment discovery requires the T3 Labs feature; set `includeLinked` to `false` for a standalone server.
 
 ## Development
 

@@ -12,6 +12,7 @@ All notable changes to this project are documented here. The format is based on 
 
 ### Fixed
 
+- Increase the status detail text and show the active T3 thread count below WORKING.
 - Keep tracking active Codex sessions when Linux marks their still-open rollout files as deleted.
 - Prevent superseded or partially read turns from leaving the status stuck on working.
 - Report complete only after every discovered Codex session is idle.

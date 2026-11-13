@@ -55,7 +55,7 @@ test('combined counts do not double count local Codex processes', async () => {
   ).getStatus();
   assert.equal(result.activeTasks, 1);
   const svg = Buffer.from(renderStatus(result).split(',')[1], 'base64').toString();
-  assert.match(svg, /1 T3 \/ 1 LOCAL/);
+  assert.match(svg, /1 THREAD<\/text>/);
   assert.match(svg, /1\/1 MACHINES BUSY/);
 });
 

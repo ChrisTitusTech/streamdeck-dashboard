@@ -22,7 +22,7 @@ function getDisplay(status, frame = 0) {
     return {
       accent: working ? '#f59e0b' : unknown ? '#ef4444' : '#22c55e',
       label: working ? 'WORKING' : unknown ? 'UNKNOWN' : 'COMPLETE',
-      detail: `${status.t3.activeTasks} T3 / ${status.localActiveTasks || 0} LOCAL`,
+      detail: `${status.t3.activeTasks} ${status.t3.activeTasks === 1 ? 'THREAD' : 'THREADS'}`,
       heading: 'CODEX + T3',
       footer: footers[Math.floor(frame / 3) % footers.length]
     };
@@ -58,7 +58,7 @@ function renderStatus(status, frame = 0) {
   <path d="M62 32h20M72 22v20" stroke="${display.accent}" stroke-width="4" stroke-linecap="round"/>
   <text x="72" y="65" fill="#a1a1aa" font-family="sans-serif" font-size="13" font-weight="700" text-anchor="middle">${escapeXml(display.heading || 'CODEX')}</text>
   <text x="72" y="94" fill="${display.accent}" font-family="sans-serif" font-size="19" font-weight="800" text-anchor="middle">${escapeXml(display.label)}</text>
-  <text x="72" y="119" fill="#d4d4d8" font-family="sans-serif" font-size="10" font-weight="600" text-anchor="middle">${escapeXml(display.detail)}</text>
+  <text x="72" y="119" fill="#d4d4d8" font-family="sans-serif" font-size="${status.t3 ? 18 : 10}" font-weight="700" text-anchor="middle">${escapeXml(display.detail)}</text>
   ${display.footer ? `<text x="72" y="135" fill="#a1a1aa" font-family="sans-serif" font-size="9" text-anchor="middle">${escapeXml(display.footer)}</text>` : `<circle cx="72" cy="132" r="3" fill="${display.accent}"/>`}
 </svg>`;
 
