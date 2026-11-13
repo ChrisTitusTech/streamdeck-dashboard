@@ -35,7 +35,7 @@ OpenDeck's Flatpak build still requires Node.js to be installed natively on the 
 
 ## Connect T3 Code
 
-Run `npm run connect:t3` from a source checkout on the OpenDeck host while T3 Code is running. Open the printed URL on that host and select **read-only** access. The setup discovers the local server automatically; pass a T3 server URL with `npm run connect:t3 -- https://your-t3-server` to connect another server. See [T3 setup](docs/INSTALL.md#connect-t3-code) for configuration and troubleshooting.
+Run `npm run connect:t3` from a source checkout on the OpenDeck host while T3 Code is running. Open the printed URL on that host and select **read-only** access. The setup discovers the local server automatically; pass a T3 server URL with `npm run connect:t3 -- https://your-t3-server` to connect another server. For direct HTTP access on a trusted LAN, use `npm run connect:t3 -- http://SERVER:3773 --trusted-lan-http --no-linked`. See [T3 setup](docs/INSTALL.md#connect-t3-code) for configuration and troubleshooting.
 
 ## How it works
 

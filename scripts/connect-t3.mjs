@@ -9,8 +9,21 @@ import t3 from '../plugin/com.christitustech.codex-status.sdPlugin/lib/t3.js';
 
 // Run once on the OpenDeck host. Tokens never go into the repository or stdout.
 const runtimeFile = path.join(process.env.T3CODE_HOME || path.join(os.homedir(), '.t3'), 'userdata', 'server-runtime.json');
-const origin = process.argv[2] || JSON.parse(await readFile(runtimeFile, 'utf8')).origin;
-const endpoint = t3.validateEndpoint(new URL('/mcp', origin).href);
+const args = process.argv.slice(2);
+const options = { trustedLanHttp: false, includeLinked: true };
+let requestedOrigin;
+for (let index = 0; index < args.length; index += 1) {
+  const arg = args[index];
+  if (arg === '--trusted-lan-http') options.trustedLanHttp = true;
+  else if (arg === '--no-linked') options.includeLinked = false;
+  else if (arg === '--pairing-code-file') {
+    options.pairingCodeFile = args[++index];
+    if (!options.pairingCodeFile) throw new Error('--pairing-code-file requires a path');
+  } else if (arg.startsWith('-') || requestedOrigin) throw new Error('Unknown or duplicate argument');
+  else requestedOrigin = arg;
+}
+const origin = requestedOrigin || JSON.parse(await readFile(runtimeFile, 'utf8')).origin;
+const endpoint = t3.validateEndpoint(new URL('/mcp', origin).href, options);
 const base = new URL(endpoint).origin;
 async function json(url, options = {}) {
   const response = await fetch(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(10000) });
@@ -55,14 +68,33 @@ try {
     state, code_challenge: createHash('sha256').update(verifier).digest('base64url'),
     code_challenge_method: 'S256', resource: endpoint, scope: 'orchestration:read'
   }).toString();
-  console.log(`Open this URL on this machine and approve READ-ONLY access:\n${authorization.href}`);
+  if (options.pairingCodeFile) {
+    const pairingCode = (await readFile(options.pairingCodeFile, 'utf8')).trim();
+    if (!pairingCode) throw new Error('Pairing code file is empty');
+    const result = await json(`${base}/oauth/mcp/decision`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        authorization: Object.fromEntries(authorization.searchParams),
+        decision: { _tag: 'pairing-code', access: 'read-only', code: pairingCode }
+      })
+    });
+    const callback = new URL(result.redirectTo);
+    const expected = new URL(redirectUri);
+    if (callback.origin !== expected.origin || callback.pathname !== expected.pathname ||
+        callback.searchParams.get('state') !== state || !callback.searchParams.get('code')) {
+      throw new Error('Invalid T3 approval callback');
+    }
+    resolveCode(callback.searchParams.get('code'));
+  } else {
+    console.log(`Open this URL on this machine and approve READ-ONLY access:\n${authorization.href}`);
+  }
   const code = await codePromise;
   const credentials = await json(metadata.token_endpoint, {
     method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ grant_type: 'authorization_code', client_id: client.client_id, redirect_uri: redirectUri, code, code_verifier: verifier, resource: endpoint })
   });
   if (typeof credentials.access_token !== 'string' || !credentials.access_token) throw new Error('No access token');
-  const monitor = new t3.McpClient(endpoint, credentials.access_token);
+  const monitor = new t3.McpClient(endpoint, credentials.access_token, options);
   await monitor.call('t3_environment_read');
   const directory = path.dirname(t3.CONFIG_PATH);
   await mkdir(directory, { recursive: true, mode: 0o700 });
@@ -74,7 +106,7 @@ try {
   await writeFile(path.join(directory, tokenFile), credentials.access_token, { mode: 0o600 });
   await chmod(path.join(directory, tokenFile), 0o600);
   config.sources = config.sources.filter((source) => source.endpoint !== endpoint);
-  config.sources.push({ endpoint, tokenFile, includeLinked: true });
+  config.sources.push({ endpoint, tokenFile, includeLinked: options.includeLinked, ...(options.trustedLanHttp ? { trustedLanHttp: true } : {}) });
   await writeFile(t3.CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
   await chmod(t3.CONFIG_PATH, 0o600);
   console.log(`Saved T3 connection to ${t3.CONFIG_PATH}. Press the Stream Deck key to refresh.`);

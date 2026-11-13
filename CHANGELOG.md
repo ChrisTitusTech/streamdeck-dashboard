@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format is based on 
 
 ### Added
 
+- Explicit per-source trusted-LAN HTTP connections and read-only setup using a pairing-code file.
 - T3 Code status across projects, providers, subagents, and linked machines.
 - Read-only OAuth connection setup, separate source counts, rotating busy-machine labels, and visible source errors.
 

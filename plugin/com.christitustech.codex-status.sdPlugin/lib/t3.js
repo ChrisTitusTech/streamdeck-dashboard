@@ -7,19 +7,19 @@ const path = require('node:path');
 const CONFIG_PATH = path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'codex-status', 't3.json');
 const ACTIVE_STATES = new Set(['preparing', 'queued', 'starting', 'running', 'waiting']);
 
-function validateEndpoint(value) {
+function validateEndpoint(value, options = {}) {
   const url = new URL(value);
   if (url.username || url.password || url.search || url.hash ||
       (url.protocol !== 'https:' && !(url.protocol === 'http:' &&
-        ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)))) {
-    throw new Error('T3 endpoint requires HTTPS or loopback HTTP');
+        (options.trustedLanHttp === true || ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname))))) {
+    throw new Error('T3 endpoint requires HTTPS, loopback HTTP, or explicit trustedLanHttp opt-in');
   }
   return url.href.replace(/\/$/, '');
 }
 
 class McpClient {
   constructor(endpoint, token, options = {}) {
-    this.endpoint = validateEndpoint(endpoint);
+    this.endpoint = validateEndpoint(endpoint, options);
     this.token = token;
     this.fetch = options.fetch || globalThis.fetch;
     this.timeoutMs = options.timeoutMs || 5000;
@@ -82,7 +82,7 @@ class T3StatusMonitor {
   constructor(options = {}) {
     this.configPath = options.configPath || CONFIG_PATH;
     this.fs = options.fileSystem || fs;
-    this.createClient = options.createClient || ((endpoint, token) => new McpClient(endpoint, token));
+    this.createClient = options.createClient || ((endpoint, token, clientOptions) => new McpClient(endpoint, token, clientOptions));
     this.clients = new Map();
   }
 
@@ -103,12 +103,12 @@ class T3StatusMonitor {
     // cannot hide successful observations from the others.
     for (const source of config.sources) {
       try {
-        const endpoint = validateEndpoint(source.endpoint);
+        const endpoint = validateEndpoint(source.endpoint, source);
         const token = (await this.fs.readFile(path.resolve(path.dirname(this.configPath), source.tokenFile), 'utf8')).trim();
         if (!token) throw new Error('Missing token');
         const key = `${endpoint}\n${token}`;
         clientKeys.add(key);
-        if (!this.clients.has(key)) this.clients.set(key, this.createClient(endpoint, token));
+        if (!this.clients.has(key)) this.clients.set(key, this.createClient(endpoint, token, { trustedLanHttp: source.trustedLanHttp === true }));
         const client = this.clients.get(key);
         const identity = await client.call('t3_environment_read');
         if (typeof identity.environmentId !== 'string') throw new Error('Missing environment id');

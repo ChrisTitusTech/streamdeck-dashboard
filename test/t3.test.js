@@ -116,3 +116,36 @@ test('known remote work stays working with visible errors when another source fa
   assert.equal(result.state, 'working');
   assert.match(Buffer.from(renderStatus(result).split(',')[1], 'base64').toString(), /SOURCE ERRORS/);
 });
+
+
+test('trusted LAN HTTP requires an explicit boolean opt-in at validation and client construction', () => {
+  const endpoint = 'http://10.0.0.92:3773/mcp';
+  assert.throws(() => validateEndpoint(endpoint));
+  assert.throws(() => validateEndpoint(endpoint, { trustedLanHttp: 'true' }));
+  assert.equal(validateEndpoint(endpoint, { trustedLanHttp: true }), endpoint);
+  assert.throws(() => new McpClient(endpoint, 'test-token'));
+  assert.equal(new McpClient(endpoint, 'test-token', { trustedLanHttp: true }).endpoint, endpoint);
+  assert.throws(() => validateEndpoint('http://user:password@10.0.0.92/mcp', { trustedLanHttp: true }));
+});
+
+test('monitor passes trusted LAN opt-in to client and supports direct sources without linked discovery', async () => {
+  let called = false;
+  const m = new T3StatusMonitor({
+    configPath: '/fake/t3.json',
+    fileSystem: { readFile: async (file) => file.endsWith('.json')
+      ? JSON.stringify({ sources: [{ endpoint: 'http://10.0.0.92:3773/mcp', tokenFile: 'token', trustedLanHttp: true, includeLinked: false }] }) : 'secret' },
+    createClient: (endpoint, token, options) => {
+      called = true;
+      assert.equal(options.trustedLanHttp, true);
+      return { call: async (name) => {
+        if (name === 't3_environment_read') return { environmentId: 'windows', label: 'win11-passthrough' };
+        assert.equal(name, 't3_thread_list');
+        return { threads: [{ threadId: 'a', status: 'running' }], nextCursor: null };
+      } };
+    }
+  });
+  const result = await m.getStatus();
+  assert.equal(called, true);
+  assert.equal(result.activeTasks, 1);
+  assert.equal(result.errors, 0);
+});

@@ -114,6 +114,18 @@ The setup writes `$XDG_CONFIG_HOME/codex-status/t3.json` (default `~/.config/cod
 }
 ```
 
-The port is an example; setup uses the actual server port. Token paths are relative to the config file or absolute. Endpoint URLs require HTTPS except on loopback. For a standalone server with linked environments disabled, set `includeLinked` to `false`. The plugin reloads config and token files on each poll. Re-run setup after a local server port change or token expiry/revocation. Remove a source from the config and revoke its connection in T3 to disconnect it.
+The port is an example; setup uses the actual server port. Token paths are relative to the config file or absolute. Endpoint URLs require HTTPS except on loopback, unless the source explicitly sets `trustedLanHttp` to `true`. For a standalone server with linked environments disabled, set `includeLinked` to `false`. The plugin reloads config and token files on each poll. Re-run setup after a local server port change or token expiry/revocation. Remove a source from the config and revoke its connection in T3 to disconnect it.
 
 If a source cannot be reached, its count is excluded and the key reports source errors. Without known active work it shows **UNKNOWN**, never **COMPLETE**. A missing config keeps the original local Codex behavior; an invalid config shows an error. Polls never overlap and individual MCP requests time out after five seconds, so unreachable machines can slow refreshes.
+
+### Direct connection over a trusted LAN
+
+For a trusted LAN where you choose to use HTTP, connect the plugin directly to each server instead of using T3's machine-link feature:
+
+```bash
+npm run connect:t3 -- http://10.0.0.92:3773 --trusted-lan-http --no-linked
+```
+
+Approve read-only access using the printed URL on the OpenDeck host. This records `trustedLanHttp: true` only for that source and skips discovery of that server's peers. Existing sources remain configured. T3's own linking restrictions remain in effect; the plugin reads this server directly.
+
+For setup using an already supplied pairing code stored in a private file, add `--pairing-code-file /absolute/path/to/code`. Setup exchanges it for read-only MCP access without printing the code or token. Remove the temporary pairing-code file afterward.
